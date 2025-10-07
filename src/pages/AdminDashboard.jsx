@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    navigate("/admin-login");
+    navigate("/admin/login");
   }
 
   const filteredUsers = users.filter(
