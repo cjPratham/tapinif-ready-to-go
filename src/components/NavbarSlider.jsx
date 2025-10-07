@@ -1,41 +1,52 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { FaUserEdit, FaSignOutAlt, FaUser, FaKey, FaBars, FaTimes } from "react-icons/fa";
+import {
+  FaUserEdit,
+  FaSignOutAlt,
+  FaUser,
+  FaKey,
+  FaBars,
+  FaTimes,
+  FaSyncAlt,
+} from "react-icons/fa";
 
 export default function NavbarSlider() {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user and username from Supabase
+  const fetchUser = async () => {
+    try {
+      setRefreshing(true);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      const currentUser = authData.user;
+      if (!currentUser) return;
+
+      setUser(currentUser);
+
+      // Fetch username from users table
+      const { data: profileData, error: profileError } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", currentUser.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      setUsername(profileData?.username || currentUser.user_metadata?.username || "");
+    } catch (err) {
+      console.error("Error fetching user or username:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError) throw authError;
-
-        const currentUser = authData.user;
-        if (!currentUser) return;
-
-        setUser(currentUser);
-
-        // Fetch username from users table
-        const { data: profileData, error: profileError } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        setUsername(profileData?.username || currentUser.user_metadata?.username || "");
-      } catch (err) {
-        console.error("Error fetching user or username:", err);
-      }
-    };
-
     fetchUser();
 
     // Listen to auth state changes
@@ -88,9 +99,22 @@ export default function NavbarSlider() {
           <h2 className="text-lg font-semibold text-blue-600">
             {username || "User"}
           </h2>
-          <button onClick={() => setMenuOpen(false)}>
-            <FaTimes className="text-gray-500 hover:text-blue-600" size={20} />
-          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchUser}
+              className={`p-1.5 rounded-full hover:bg-blue-100 transition ${
+                refreshing ? "animate-spin" : ""
+              }`}
+              title="Refresh Username"
+            >
+              <FaSyncAlt className="text-blue-600" size={16} />
+            </button>
+
+            <button onClick={() => setMenuOpen(false)}>
+              <FaTimes className="text-gray-500 hover:text-blue-600" size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Menu Items */}
