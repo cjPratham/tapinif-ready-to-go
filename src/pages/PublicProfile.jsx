@@ -194,7 +194,7 @@ useEffect(() => {
       if (error) throw error;
 
       // If profile is unpublished and user is not admin, show UnpublishedProfile
-      if (!data.publish && !data.is_admin) {
+      if (!data.publish) {
         setProfile(null);       // clear any profile data
         setError(null);         // clear errors
         setLoading(false);

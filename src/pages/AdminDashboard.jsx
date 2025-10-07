@@ -48,12 +48,12 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-semibold text-blue-600 mx-auto">
         Admin Dashboard
       </h1>
-      <button
+      {/* <button
         onClick={handleLogout}
         className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
       >
         Logout
-      </button>
+      </button> */}
     </div>
 
     {/* Search */}
