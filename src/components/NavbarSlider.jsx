@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { FaUserEdit, FaSignOutAlt, FaUser, FaKey, FaBars, FaTimes } from "react-icons/fa";
+import {
+  FaUserEdit,
+  FaSignOutAlt,
+  FaUser,
+  FaKey,
+  FaBars,
+  FaTimes,
+} from "react-icons/fa";
 
 export default function NavbarSlider() {
   const [user, setUser] = useState(null);
@@ -9,43 +16,59 @@ export default function NavbarSlider() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user and username from Supabase
   useEffect(() => {
+    // 🔹 Fetch user and username (used both on load and when auth state changes)
     const fetchUser = async () => {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError) throw authError;
+      const { data } = await supabase.auth.getUser();
+      const currentUser = data.user;
+      setUser(currentUser);
 
-        const currentUser = authData.user;
-        if (!currentUser) return;
-
-        setUser(currentUser);
-
-        // Fetch username from users table
-        const { data: profileData, error: profileError } = await supabase
+      if (currentUser) {
+        const { data: profileData } = await supabase
           .from("users")
           .select("username")
           .eq("id", currentUser.id)
-          .single();
+          .maybeSingle();
 
-        if (profileError) throw profileError;
-
-        setUsername(profileData?.username || currentUser.user_metadata?.username || "");
-      } catch (err) {
-        console.error("Error fetching user or username:", err);
+        setUsername(
+          profileData?.username ||
+            currentUser.user_metadata?.username ||
+            ""
+        );
+      } else {
+        setUsername("");
       }
     };
 
     fetchUser();
 
-    // Listen to auth state changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      setUsername(currentUser?.user_metadata?.username || "");
-    });
+    // 🔹 Listen for login/logout changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const newUser = session?.user || null;
+        setUser(newUser);
 
-    return () => listener.subscription.unsubscribe();
+        if (newUser) {
+          const { data: profileData } = await supabase
+            .from("users")
+            .select("username")
+            .eq("id", newUser.id)
+            .maybeSingle();
+
+          setUsername(
+            profileData?.username ||
+              newUser.user_metadata?.username ||
+              ""
+          );
+        } else {
+          setUsername("");
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -54,7 +77,7 @@ export default function NavbarSlider() {
     navigate("/");
   };
 
-  if (!user) return null; // Hide slider if not logged in
+  if (!user) return null;
 
   return (
     <>
@@ -83,7 +106,6 @@ export default function NavbarSlider() {
           menuOpen ? "translate-x-0" : "-translate-x-full"
         } transition-transform duration-300`}
       >
-        {/* Header */}
         <div className="flex justify-between items-center p-5 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-blue-600">
             {username || "User"}
@@ -93,7 +115,6 @@ export default function NavbarSlider() {
           </button>
         </div>
 
-        {/* Menu Items */}
         <nav className="flex flex-col p-5 space-y-5 text-gray-700">
           <Link
             to="/profile"
@@ -103,7 +124,7 @@ export default function NavbarSlider() {
             <FaUserEdit size={18} /> Edit Profile
           </Link>
 
-          {username ? (
+          {username && (
             <Link
               to={`/profile/${username}`}
               onClick={() => setMenuOpen(false)}
@@ -111,10 +132,6 @@ export default function NavbarSlider() {
             >
               <FaUser size={18} /> View Profile
             </Link>
-          ) : (
-            <span className="flex items-center gap-3 text-gray-400">
-              <FaUser size={18} /> Loading...
-            </span>
           )}
 
           <Link
@@ -133,7 +150,6 @@ export default function NavbarSlider() {
           </button>
         </nav>
 
-        {/* Footer */}
         <div className="absolute bottom-6 left-0 w-full text-center text-xs text-gray-400">
           <p>
             Powered by <span className="text-blue-600">Tapinfi Solutions Pvt Ltd</span>
