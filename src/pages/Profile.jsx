@@ -156,48 +156,88 @@ useEffect(() => {
   // 3. Handle profile update
   // ----------------------------
   const handleSave = async () => {
-    if (!user || isSaving) return;
-    setIsSaving(true);
-    
-    // VALIDATION: Check for the missing username
-    if (!profile.username) {
-        alert("❌ Error: Username is required and cannot be empty.");
-        setIsSaving(false);
-        return;
+  if (!user || isSaving) return;
+  setIsSaving(true);
+
+  const username = profile.username?.trim();
+
+  // VALIDATION 1: Empty check
+  if (!username) {
+    alert("❌ Error: Username is required and cannot be empty.");
+    setIsSaving(false);
+    return;
+  }
+
+  // VALIDATION 2: No spaces allowed
+  if (/\s/.test(username)) {
+    alert("❌ Error: Username cannot contain spaces.");
+    setIsSaving(false);
+    return;
+  }
+
+  try {
+    // VALIDATION 3: Uniqueness check
+    const { data: existingUser, error: userCheckError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("username", username)
+      .neq("id", user.id) // exclude current user's own username
+      .maybeSingle();
+
+    if (userCheckError) throw userCheckError;
+
+    if (existingUser) {
+      alert("❌ Error: This username is already taken. Please choose another.");
+      setIsSaving(false);
+      return;
     }
 
-    // Destructure all editable fields including the new 'username'
-    const { 
-        full_name, role, company, about, 
-        phone_number, website_url, portfolio_url,
-        facebook_url, instagram_url, linkedin_url, twitter_url, whatsapp_url,
-        username
+    // Extract editable fields
+    const {
+      full_name,
+      role,
+      company,
+      about,
+      phone_number,
+      website_url,
+      portfolio_url,
+      facebook_url,
+      instagram_url,
+      linkedin_url,
+      twitter_url,
+      whatsapp_url,
     } = profile;
 
-    const { error } = await supabase
-      .from("users")
-      .upsert({
-        id: user.id,
-        user_email: user.email, // keep email in sync
-        full_name,
-        role,
-        company,
-        about,
-        phone_number,
-        website_url,
-        portfolio_url,
-        facebook_url,
-        instagram_url,
-        linkedin_url,
-        twitter_url,
-        whatsapp_url,
-        username, // <-- ADDED USERNAME HERE
-      });
+    // Update / upsert the record
+    const { error } = await supabase.from("users").upsert({
+      id: user.id,
+      user_email: user.email,
+      full_name,
+      role,
+      company,
+      about,
+      phone_number,
+      website_url,
+      portfolio_url,
+      facebook_url,
+      instagram_url,
+      linkedin_url,
+      twitter_url,
+      whatsapp_url,
+      username,
+    });
 
+    if (error) throw error;
+
+    alert("✅ Profile successfully updated!");
+  } catch (err) {
+    console.error("Profile update error:", err);
+    alert("❌ Profile update failed: " + err.message);
+  } finally {
     setIsSaving(false);
-    if (error) alert("❌ Profile update failed: " + error.message);
-    else alert("✅ Profile successfully updated!");
-  };
+  }
+};
+
 
   // ----------------------------
   // 4. Logout (unchanged)
@@ -247,14 +287,19 @@ useEffect(() => {
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Basic Details</h2>
             
             <ProfileInput
-                label="Username (Required)"
-                placeholder="unique_username_123"
-                value={profile.username || ""}
-                onChange={(e) => handleProfileChange("username", e.target.value)}
+              label="Username (Required)"
+              placeholder="unique_username_123"
+              value={profile.username || ""}
+              onChange={(e) => {
+                // Remove spaces dynamically
+                const value = e.target.value.replace(/\s+/g, "");
+                handleProfileChange("username", value);
+              }}
             />
             <p className="text-sm text-red-600 mb-4 -mt-2">
-                This field is required and must be unique.
+              This field is required, must be unique, and cannot contain spaces.
             </p>
+
 
             <ProfileInput
                 label="Full Name"
