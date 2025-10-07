@@ -12,19 +12,35 @@ import {
 
 export default function NavbarSlider() {
   const [user, setUser] = useState(null);
+  const [username, setUsername] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
-      setUser(data.user || null);
+      const currentUser = data.user || null;
+      setUser(currentUser);
+
+      // Fetch username from users table if stored there
+      if (currentUser) {
+        const { data: profileData } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", currentUser.id)
+          .single();
+
+        setUsername(profileData?.username || currentUser.user_metadata?.username || "");
+      }
     };
+
     getUser();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setUser(session?.user || null);
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        setUsername(currentUser?.user_metadata?.username || "");
       }
     );
 
@@ -69,7 +85,7 @@ export default function NavbarSlider() {
         {/* Header */}
         <div className="flex justify-between items-center p-5 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-blue-600">
-            My Account
+            {username || "User"}
           </h2>
           <button onClick={() => setMenuOpen(false)}>
             <FaTimes className="text-gray-500 hover:text-blue-600" size={20} />
@@ -87,7 +103,7 @@ export default function NavbarSlider() {
           </Link>
 
           <Link
-            to={`/profile/${user.user_metadata?.username || ""}`}
+            to={`/profile/${username}`}
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 hover:text-blue-600 transition"
           >
