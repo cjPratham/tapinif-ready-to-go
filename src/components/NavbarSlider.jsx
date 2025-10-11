@@ -15,6 +15,7 @@ export default function NavbarSlider() {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
 
@@ -22,12 +23,16 @@ export default function NavbarSlider() {
     try {
       setRefreshing(true);
       const { data: authData, error: authError } = await supabase.auth.getUser();
+
       if (authError) throw authError;
 
-      const currentUser = authData.user;
-      if (!currentUser) return;
-
+      const currentUser = authData?.user || null;
       setUser(currentUser);
+
+      if (!currentUser) {
+        setUsername("");
+        return;
+      }
 
       // Fetch username from users table
       const { data: profileData, error: profileError } = await supabase
@@ -36,24 +41,27 @@ export default function NavbarSlider() {
         .eq("id", currentUser.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError && profileError.code !== "PGRST116") throw profileError; // ignore "no rows"
 
       setUsername(profileData?.username || currentUser.user_metadata?.username || "");
     } catch (err) {
-      console.error("Error fetching user or username:", err);
+      console.error("Error fetching user or username:", err.message || err);
+      setUser(null);
+      setUsername("");
     } finally {
       setRefreshing(false);
+      setLoadingUser(false);
     }
   };
 
   useEffect(() => {
     fetchUser();
 
-    // Listen to auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
       setUsername(currentUser?.user_metadata?.username || "");
+      setLoadingUser(false);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -62,10 +70,16 @@ export default function NavbarSlider() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setMenuOpen(false);
+    setUser(null);
+    setUsername("");
     navigate("/");
   };
 
-  if (!user) return null; // Hide slider if not logged in
+  // Loading state while fetching user
+  if (loadingUser) return null;
+
+  // Hide menu if not logged in
+  if (!user) return null;
 
   return (
     <>
@@ -133,13 +147,22 @@ export default function NavbarSlider() {
               onClick={() => setMenuOpen(false)}
               className="flex items-center gap-3 hover:text-blue-600 transition"
             >
-              <FaUser size={18} /> View Profile
+              <FaUser size={18} /> View Public Profile
             </Link>
           ) : (
             <span className="flex items-center gap-3 text-gray-400">
               <FaUser size={18} /> Loading...
             </span>
           )}
+
+          {/* Wallet Link */}
+          <Link
+            to="/wallet"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 hover:text-blue-600 transition"
+          >
+            <FaUserEdit size={18} /> My Wallet
+          </Link>
 
           <Link
             to="/forgot-password"

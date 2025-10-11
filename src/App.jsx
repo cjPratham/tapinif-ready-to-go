@@ -9,6 +9,8 @@ import ResetPassword from "./components/ResetPassword";
 import NavbarSlider from "./components/NavbarSlider";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import WalletPage from "./pages/WalletPage";
+
 
 export default function App() {
   return (
@@ -24,6 +26,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/wallet" element={<WalletPage />} />
       </Routes>
     </Router>
   );
