@@ -1,4 +1,3 @@
-// src/pages/AdminDashboard.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +7,9 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 8;
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,10 +23,7 @@ export default function AdminDashboard() {
   }
 
   async function togglePublish(id, currentValue) {
-    await supabase
-      .from("users")
-      .update({ publish: !currentValue })
-      .eq("id", id);
+    await supabase.from("users").update({ publish: !currentValue }).eq("id", id);
     fetchUsers();
   }
 
@@ -33,54 +32,67 @@ export default function AdminDashboard() {
     navigate("/admin/login");
   }
 
+  // Filter users by search input
   const filteredUsers = users.filter(
     (user) =>
-      user.email?.toLowerCase().includes(search.toLowerCase()) ||
+      user.user_email?.toLowerCase().includes(search.toLowerCase()) ||
       user.username?.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+
+  const handlePageChange = (page) => {
+    if (page > 0 && page <= totalPages) setCurrentPage(page);
+  };
 
   if (loading) return <p className="text-center mt-10">Loading users...</p>;
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       {/* Header */}
-    <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-semibold text-blue-600 mx-auto">
-        Admin Dashboard
-      </h1>
-      <button
-        onClick={handleLogout}
-        className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-      >
-        Logout
-      </button>
-    </div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold text-blue-600 mx-auto">
+          Admin Dashboard
+        </h1>
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </div>
 
-    {/* Search */}
-    <div className="mb-4">
-      <input
-        type="text"
-        placeholder="Search by email or username..."
-        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-    </div>
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search by email or username..."
+          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1); // reset to first page on search
+          }}
+        />
+      </div>
 
       {/* Users Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded-xl shadow-md">
+      <div className="overflow-x-auto shadow-md rounded-xl bg-white">
+        <table className="min-w-full text-sm text-gray-700">
           <thead>
-            <tr className="bg-gray-100 text-left text-gray-600 text-sm uppercase tracking-wider">
-              <th className="p-3">Email</th>
-              <th className="p-3">Phone Number</th>
-              <th className="p-3">Username</th>
-              <th className="p-3">Published</th>
-              <th className="p-3">Actions</th>
+            <tr className="bg-gray-100 uppercase text-gray-600">
+              <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Phone Number</th>
+              <th className="p-3 text-left">Username</th>
+              <th className="p-3 text-left">Published</th>
+              <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <tr key={user.id} className="border-t hover:bg-gray-50">
                 <td className="p-3">{user.user_email}</td>
                 <td className="p-3">{user.phone_number}</td>
@@ -123,9 +135,9 @@ export default function AdminDashboard() {
               </tr>
             ))}
 
-            {filteredUsers.length === 0 && (
+            {paginatedUsers.length === 0 && (
               <tr>
-                <td colSpan="4" className="text-center p-4 text-gray-500">
+                <td colSpan="5" className="text-center p-4 text-gray-500">
                   No users found.
                 </td>
               </tr>
@@ -133,6 +145,49 @@ export default function AdminDashboard() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center mt-6 gap-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === 1
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          >
+            Prev
+          </button>
+
+          {[...Array(totalPages)].map((_, index) => (
+            <button
+              key={index + 1}
+              onClick={() => handlePageChange(index + 1)}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === index + 1
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 hover:bg-gray-300"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === totalPages
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
