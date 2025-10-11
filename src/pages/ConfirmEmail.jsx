@@ -52,9 +52,7 @@ export default function ConfirmEmail() {
 
         <h1 className="text-2xl font-bold text-blue-700 mb-3">Email Confirmed!</h1>
         <p className="text-gray-600 mb-6">
-          Your email has been successfully verified. <br />
-          You’ll be redirected to the <span className="font-semibold text-blue-600">Login</span> page
-          in <span className="font-semibold">{countdown}</span> seconds.
+          Your email has been successfully verified.
         </p>
 
         <button
