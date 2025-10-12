@@ -209,10 +209,10 @@ export default function Profile() {
         whatsapp_url: profile.whatsapp_url,
         username,
       };
-
+      
       const { error } = await supabase.from("users").upsert(updatedProfile);
       if (error) throw error;
-
+      setProfile((prev) => ({ ...prev, isUsernameLocked: true }));
       alert("✅ Profile updated successfully!");
     } catch (err) {
       alert("❌ Update failed: " + err.message);
@@ -298,21 +298,22 @@ export default function Profile() {
             placeholder="unique_id"
             value={profile.username || ""}
             onChange={(e) =>
-              !profile.username &&
               setProfile((prev) => ({
                 ...prev,
                 username: e.target.value.replace(/\s+/g, ""),
               }))
             }
-            readOnly={!!profile.username}
+            readOnly={profile.isUsernameLocked} // New condition (see below)
             required
             error={errors.username}
           />
-          {profile.username && (
+
+          {profile.isUsernameLocked && (
             <p className="text-green-600 text-xs mb-4 -mt-2">
               ✅ Username locked — cannot be changed.
             </p>
           )}
+
           <ProfileInput
             label="Full Name"
             placeholder="Aman Gupta"

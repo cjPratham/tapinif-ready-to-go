@@ -10,7 +10,7 @@ import NavbarSlider from "./components/NavbarSlider";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import WalletPage from "./pages/WalletPage";
-
+import MyThemes from "./pages/MyThemes";
 
 export default function App() {
   return (
@@ -27,6 +27,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/wallet" element={<WalletPage />} />
+        <Route path="/themes" element={<MyThemes />} />
       </Routes>
     </Router>
   );

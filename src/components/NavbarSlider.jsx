@@ -8,7 +8,8 @@ import {
   FaKey,
   FaBars,
   FaTimes,
-  FaSyncAlt,
+  FaWallet,
+  FaPalette,
 } from "react-icons/fa";
 
 export default function NavbarSlider() {
@@ -54,18 +55,27 @@ export default function NavbarSlider() {
     }
   };
 
-  useEffect(() => {
-    fetchUser();
+ useEffect(() => {
+  fetchUser();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      setUsername(currentUser?.user_metadata?.username || "");
-      setLoadingUser(false);
-    });
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const currentUser = session?.user || null;
+    setUser(currentUser);
+    setUsername(currentUser?.user_metadata?.username || "");
+    setLoadingUser(false);
+  });
 
-    return () => listener.subscription.unsubscribe();
-  }, []);
+  const interval = setInterval(fetchUser, 1000); // every 30s
+  const handleFocus = () => fetchUser();
+  window.addEventListener("focus", handleFocus);
+
+  return () => {
+    listener.subscription.unsubscribe();
+    clearInterval(interval);
+    window.removeEventListener("focus", handleFocus);
+  };
+}, []);
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -122,7 +132,7 @@ export default function NavbarSlider() {
               }`}
               title="Refresh Username"
             >
-              <FaSyncAlt className="text-blue-600" size={16} />
+              {/* <FaSyncAlt className="text-blue-600" size={16} /> */}
             </button>
 
             <button onClick={() => setMenuOpen(false)}>
@@ -161,7 +171,16 @@ export default function NavbarSlider() {
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 hover:text-blue-600 transition"
           >
-            <FaUserEdit size={18} /> My Wallet
+            <FaWallet size={18} /> My Wallet
+          </Link>
+
+          {/* Themes Link */}
+          <Link
+            to="/themes"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 hover:text-blue-600 transition"
+          >
+            <FaPalette  size={18} /> My Themes
           </Link>
 
           <Link
