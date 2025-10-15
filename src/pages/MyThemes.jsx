@@ -25,16 +25,14 @@ export default function MyThemes() {
   async function fetchThemes() {
     setLoading(true);
     try {
-      // 1️⃣ Get user's applied theme
       const { data: userData } = await supabase
         .from("users")
         .select("themeid")
         .eq("id", currentUser.id)
-        .maybeSingle(); // safe
+        .maybeSingle();
 
       const appliedThemeId = userData?.themeid || null;
 
-      // 2️⃣ Get assigned themes
       const { data: userAssignments } = await supabase
         .from("user_themes")
         .select("theme_id")
@@ -42,13 +40,11 @@ export default function MyThemes() {
 
       const assignedIds = userAssignments?.map((t) => t.theme_id) || [];
 
-      // 3️⃣ Get available themes
       const { data: allThemes } = await supabase
         .from("available_themes")
         .select("*")
         .in("id", assignedIds);
 
-      // 4️⃣ Combine applied info
       const combined = allThemes.map((theme) => ({
         ...theme,
         applied: theme.id === appliedThemeId,
@@ -62,35 +58,30 @@ export default function MyThemes() {
   }
 
   async function applyTheme(themeId) {
-  setApplyingId(themeId);
-  try {
-    // 1️⃣ Reset all user's theme assignments to applied = false
-    await supabase
-      .from("user_themes")
-      .update({ applied: false })
-      .eq("user_id", currentUser.id);
+    setApplyingId(themeId);
+    try {
+      await supabase
+        .from("user_themes")
+        .update({ applied: false })
+        .eq("user_id", currentUser.id);
 
-    // 2️⃣ Set applied = true for the selected theme
-    await supabase
-      .from("user_themes")
-      .update({ applied: true })
-      .eq("user_id", currentUser.id)
-      .eq("theme_id", themeId);
+      await supabase
+        .from("user_themes")
+        .update({ applied: true })
+        .eq("user_id", currentUser.id)
+        .eq("theme_id", themeId);
 
-    // 3️⃣ Update user's themeid
-    await supabase
-      .from("users")
-      .update({ themeid: themeId })
-      .eq("id", currentUser.id);
+      await supabase
+        .from("users")
+        .update({ themeid: themeId })
+        .eq("id", currentUser.id);
 
-    // Refresh themes
-    fetchThemes();
-  } catch (err) {
-    console.error("Error applying theme:", err.message);
+      fetchThemes();
+    } catch (err) {
+      console.error("Error applying theme:", err.message);
+    }
+    setApplyingId(null);
   }
-  setApplyingId(null);
-}
-
 
   if (!currentUser) return <p className="text-center mt-10">Loading user...</p>;
   if (loading) return <p className="text-center mt-10">Loading your themes...</p>;
@@ -108,6 +99,17 @@ export default function MyThemes() {
               theme.applied ? "border-green-500 bg-green-50" : "border-gray-200 bg-white"
             }`}
           >
+            {theme.image_url && (
+              <div className="w-full h-52 flex items-center justify-center bg-gray-100 rounded mb-2 overflow-hidden">
+              <img
+                src={theme.image_url}
+                alt={theme.name}
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+
+
+            )}
             <div className="flex items-center gap-2 mb-2">
               <FaPalette size={16} className="text-blue-500" />
               <span className="font-medium">{theme.name}</span>

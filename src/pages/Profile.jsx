@@ -1,198 +1,512 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import imageCompression from "browser-image-compression";
 
-/* ----------------------------
-  Reusable Input Components
----------------------------- */
-const ProfileInput = ({
-  label,
-  placeholder,
-  value,
-  onChange,
-  type = "text",
-  readOnly = false,
-  required = false,
-  error,
-}) => (
+/*
+  ProfileWizard.jsx
+  - Step-by-step onboarding for Tapinfi profile editing
+  - Sections: 1) Profile Images  2) Basic Details  3) Contact & Social  4) Preview & Save
+  - Username & Full name locked after first save (enforced via is_username_locked column)
+  - Strong validations for phone (E.164) and social URLs
+  - Clean UI with Next / Previous, progress indicator, per-step validation
+
+  Notes:
+  - This file intentionally contains multiple small components for one-file preview. In a real project split them.
+  - Tailwind classes are used for styling.
+*/
+
+/* --------------------
+   Utilities: validators
+   -------------------- */
+const PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
+ // E.164-ish validation (1 to 15 digits, optional +)
+const URL_REGEX = /^(https?:)\/\/([\w.-]+)(:[0-9]+)?(\/.*)?$/i;
+const SOCIAL_WHITELIST = [
+  "linkedin.com",
+  "instagram.com",
+  "twitter.com",
+  "x.com",
+  "facebook.com",
+  "wa.me",
+  "whatsapp.com",
+];
+
+function validateSocialUrl(url) {
+  if (!url) return true; // optional field
+  if (!URL_REGEX.test(url)) return false;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    return SOCIAL_WHITELIST.some((domain) => host.endsWith(domain));
+  } catch (e) {
+    return false;
+  }
+}
+
+function validatePhone(phone) {
+  if (!phone) return true; // optional
+  const cleaned = phone.trim();
+  return PHONE_REGEX.test(cleaned);
+}
+
+/* --------------------
+   Small UI primitives
+   -------------------- */
+const Field = ({ label, children, error }) => (
   <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-700">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <input
-      type={type}
-      placeholder={placeholder}
-      className={`w-full p-3 border rounded-lg transition duration-150 ease-in-out ${
-        readOnly
-          ? "bg-gray-50 border-gray-300"
-          : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-      } ${error ? "border-red-500" : ""}`}
-      value={value}
-      onChange={onChange}
-      readOnly={readOnly}
-    />
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    {children}
     {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
   </div>
 );
 
-const ProfileTextarea = ({
-  label,
-  placeholder,
-  value,
-  onChange,
-  rows = 3,
-  error,
-}) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
-    <textarea
-      placeholder={placeholder}
-      className={`w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition duration-150 ease-in-out ${
-        error ? "border-red-500" : ""
-      }`}
-      rows={rows}
-      value={value}
-      onChange={onChange}
-    />
-    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-  </div>
+const TextInput = ({ value, onChange, placeholder = "", readOnly = false }) => (
+  <input
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    readOnly={readOnly}
+    className={`w-full p-3 border rounded-lg transition duration-150 ease-in-out ${
+      readOnly ? "bg-gray-100 border-gray-300" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+    }`}
+  />
 );
 
-export default function Profile() {
+/* --------------------
+   ImageUploader (with preview + progress)
+   -------------------- */
+function ImageUploader({ label, currentUrl, onUpload, accept = "image/*", maxSizeMB = 0.5, maxDim = 800 }) {
+  const [preview, setPreview] = useState(currentUrl || "");
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => setPreview(currentUrl || ""), [currentUrl]);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const options = { maxSizeMB, maxWidthOrHeight: maxDim, useWebWorker: true, fileType: "image/webp" };
+      const compressed = await imageCompression(file, options);
+      // create a local preview immediately
+      const localUrl = URL.createObjectURL(compressed);
+      setPreview(localUrl);
+      await onUpload(compressed);
+    } catch (e) {
+      alert("Image upload failed: " + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <div className="flex items-center space-x-4">
+        <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+          {preview ? (
+            <img src={preview} alt={label} className="w-full h-full object-cover" />
+          ) : (
+            <div className="text-xs text-gray-400">No image</div>
+          )}
+        </div>
+        <label className="cursor-pointer inline-flex items-center px-3 py-2 bg-white border rounded shadow-sm text-sm text-blue-600 hover:bg-blue-50">
+          {uploading ? "Uploading..." : "Change"}
+          <input
+            type="file"
+            accept={accept}
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files[0])}
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------
+   Step components
+   -------------------- */
+function StepImages({ profile, onUploadProfile, onUploadCover }) {
+  return (
+    <div>
+      <h3 className="text-lg font-semibold mb-3">Profile Pictures</h3>
+      <ImageUploader label="Profile Photo" currentUrl={profile.profile_pic_url} onUpload={onUploadProfile} maxSizeMB={0.5} maxDim={800} />
+      <ImageUploader label="Cover Photo" currentUrl={profile.cover_pic_url} onUpload={onUploadCover} maxSizeMB={1} maxDim={1600} />
+    </div>
+  );
+}
+
+function StepBasic({ profile, setProfile, errors, readOnlyUsername }) {
+  return (
+    <div>
+      <h3 className="text-lg font-semibold mb-3">Basic Details</h3>
+      <Field label="Username" error={errors.username}>
+        <TextInput
+          value={profile.username || ""}
+          onChange={(e) => setProfile((p) => ({ ...p, username: e.target.value.replace(/\s+/g, "") }))}
+          placeholder="unique_id"
+          readOnly={readOnlyUsername}
+        />
+      </Field>
+
+      <Field label="Full Name" error={errors.full_name}>
+        <TextInput
+          value={profile.full_name || ""}
+          onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))}
+          placeholder="Your full name"
+          readOnly={!!profile.is_fullname_locked}
+        />
+      </Field>
+
+      <Field label="Company" error={errors.company}>
+        <TextInput value={profile.company || ""} onChange={(e) => setProfile((p) => ({ ...p, company: e.target.value }))} placeholder="Company" />
+      </Field>
+
+      <Field label="Role / Title" error={errors.role}>
+        <TextInput value={profile.role || ""} onChange={(e) => setProfile((p) => ({ ...p, role: e.target.value }))} placeholder="Founder / CEO" />
+      </Field>
+
+      <Field label="About">
+        <textarea value={profile.about || ""} onChange={(e) => setProfile((p) => ({ ...p, about: e.target.value }))} className="w-full p-3 border rounded-lg" rows={4} />
+      </Field>
+    </div>
+  );
+}
+
+function StepContact({ profile, setProfile, errors }) {
+  return (
+    <div>
+      <h3 className="text-lg font-semibold mb-3">Contact & Social</h3>
+      <Field label="Email">
+        <TextInput value={profile.user_email || ""} readOnly />
+      </Field>
+
+      <Field label="Phone Number" error={errors.phone_number}>
+        <TextInput value={profile.phone_number || ""} onChange={(e) => setProfile((p) => ({ ...p, phone_number: e.target.value }))} placeholder="+919876543210" />
+      </Field>
+
+      <Field label="Website" error={errors.website_url}>
+        <TextInput value={profile.website_url || ""} onChange={(e) => setProfile((p) => ({ ...p, website_url: e.target.value }))} placeholder="https://yourcompany.com" />
+      </Field>
+
+      <Field label="LinkedIn" error={errors.linkedin_url}>
+        <TextInput value={profile.linkedin_url || ""} onChange={(e) => setProfile((p) => ({ ...p, linkedin_url: e.target.value }))} placeholder="https://linkedin.com/in/yourname" />
+      </Field>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Instagram" error={errors.instagram_url}>
+          <TextInput value={profile.instagram_url || ""} onChange={(e) => setProfile((p) => ({ ...p, instagram_url: e.target.value }))} placeholder="https://instagram.com/yourhandle" />
+        </Field>
+        <Field label="X / Twitter" error={errors.twitter_url}>
+          <TextInput value={profile.twitter_url || ""} onChange={(e) => setProfile((p) => ({ ...p, twitter_url: e.target.value }))} placeholder="https://x.com/yourhandle" />
+        </Field>
+      </div>
+
+      <Field label="Facebook" error={errors.facebook_url}>
+        <TextInput value={profile.facebook_url || ""} onChange={(e) => setProfile((p) => ({ ...p, facebook_url: e.target.value }))} placeholder="https://facebook.com/yourpage" />
+      </Field>
+
+      <Field label="WhatsApp Link" error={errors.whatsapp_url}>
+        <TextInput value={profile.whatsapp_url || ""} onChange={(e) => setProfile((p) => ({ ...p, whatsapp_url: e.target.value }))} placeholder="https://wa.me/919876543210" />
+      </Field>
+    </div>
+  );
+}
+
+function StepPreview({ profile }) {
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold mb-3">Preview</h3>
+
+      {/* COVER IMAGE */}
+      <div className="relative w-full h-40 rounded-lg overflow-hidden bg-gray-100">
+        {profile.cover_pic_url ? (
+          <img
+            src={profile.cover_pic_url}
+            alt="Cover"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            No cover photo
+          </div>
+        )}
+      </div>
+
+      {/* PROFILE SECTION */}
+      <div className="border rounded-xl p-5 bg-white shadow-sm">
+        <div className="flex items-center space-x-4 border-b pb-4">
+          <img
+            src={profile.profile_pic_url || "https://via.placeholder.com/80"}
+            alt="profile"
+            className="w-20 h-20 rounded-full object-cover border-2 border-blue-500"
+          />
+          <div>
+            <div className="text-xl font-bold text-gray-800">{profile.full_name}</div>
+            <div className="text-sm text-gray-600">@{profile.username}</div>
+            <div className="text-sm text-gray-700 mt-1">
+              {profile.role} {profile.company && <>— {profile.company}</>}
+            </div>
+          </div>
+        </div>
+
+        {/* ABOUT */}
+        {profile.about && (
+          <p className="mt-4 text-gray-700 leading-relaxed">{profile.about}</p>
+        )}
+
+        {/* CONTACT INFO */}
+        <div className="mt-6 text-sm text-gray-700 space-y-2">
+          {profile.user_email && (
+            <div className="flex items-center">
+              <span className="font-medium w-28 text-gray-500">Email:</span>
+              <a
+                href={`mailto:${profile.user_email}`}
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.user_email}
+              </a>
+            </div>
+          )}
+
+          {profile.phone_number && (
+            <div className="flex items-center">
+              <span className="font-medium w-28 text-gray-500">Phone:</span>
+              <a
+                href={`tel:${profile.phone_number}`}
+                className="text-blue-600 hover:underline"
+              >
+                {profile.phone_number}
+              </a>
+            </div>
+          )}
+
+          {profile.whatsapp_url && (
+            <div className="flex items-center">
+              <span className="font-medium w-28 text-gray-500">WhatsApp:</span>
+              <a
+                href={profile.whatsapp_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.whatsapp_url}
+              </a>
+            </div>
+          )}
+
+          {profile.website_url && (
+            <div className="flex items-center">
+              <span className="font-medium w-28 text-gray-500">Website:</span>
+              <a
+                href={profile.website_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.website_url}
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* SOCIAL LINKS */}
+        <div className="mt-6 text-sm text-gray-700 space-y-1">
+          {profile.linkedin_url && (
+            <div>
+              <span className="font-medium text-gray-500">LinkedIn:</span>{" "}
+              <a
+                href={profile.linkedin_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.linkedin_url}
+              </a>
+            </div>
+          )}
+          {profile.instagram_url && (
+            <div>
+              <span className="font-medium text-gray-500">Instagram:</span>{" "}
+              <a
+                href={profile.instagram_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.instagram_url}
+              </a>
+            </div>
+          )}
+          {profile.twitter_url && (
+            <div>
+              <span className="font-medium text-gray-500">X/Twitter:</span>{" "}
+              <a
+                href={profile.twitter_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.twitter_url}
+              </a>
+            </div>
+          )}
+          {profile.facebook_url && (
+            <div>
+              <span className="font-medium text-gray-500">Facebook:</span>{" "}
+              <a
+                href={profile.facebook_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {profile.facebook_url}
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+/* --------------------
+   Main Wizard
+   -------------------- */
+export default function ProfileWizard() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState({});
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [step, setStep] = useState(0);
   const navigate = useNavigate();
 
-  /* ----------------------------
-     1. Fetch user & profile
-  ---------------------------- */
+  const steps = ["Images", "Basic", "Contact", "Preview"];
+
   useEffect(() => {
     const fetchUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (error || !user) {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !authData?.user) {
         navigate("/");
         return;
       }
-      setUser(user);
+      setUser(authData.user);
 
-      const { data: userData } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
+      const { data: userData } = await supabase.from("users").select("*").eq("id", authData.user.id).single();
       if (!userData) {
-        await supabase
-          .from("users")
-          .upsert({ id: user.id, user_email: user.email });
-        setProfile({ user_email: user.email });
+        await supabase.from("users").upsert({ id: authData.user.id, user_email: authData.user.email });
+        setProfile({ user_email: authData.user.email });
       } else {
-        setProfile({ ...userData, user_email: user.email });
+        // normalize keys for this component
+        setProfile({ ...userData, user_email: authData.user.email });
       }
       setLoading(false);
     };
     fetchUser();
   }, [navigate]);
 
-  /* ----------------------------
-     2. Image Upload Handlers
-  ---------------------------- */
-  const handleImageUpload = async (e, type = "profile") => {
-    const file = e.target.files[0];
-    if (!file || !user) return;
-    if (!profile.username) {
-      alert("Please set your username before uploading images.");
-      return;
-    }
+  /* ----------
+     Image upload handlers
+  ---------- */
+  const uploadImageToStorage = async (file, type) => {
+    if (!user) throw new Error("No user");
+    const timestamp = Date.now();
+    const filePath = `${type}_${user.id}_${timestamp}.webp`;
 
-    try {
-      const options = {
-        maxSizeMB: type === "cover" ? 1 : 0.5,
-        maxWidthOrHeight: type === "cover" ? 1600 : 800,
-        useWebWorker: true,
-        fileType: "image/webp",
-      };
-      const compressed = await imageCompression(file, options);
-      const timestamp = Date.now();
-      const filePath = `${type}_${user.id}_${timestamp}.webp`;
-
-      const columnKey = type === "cover" ? "cover_pic_url" : "profile_pic_url";
-      const oldUrl = profile[columnKey];
-      if (oldUrl) {
+    // delete old file if present
+    const columnKey = type === "cover" ? "cover_pic_url" : "profile_pic_url";
+    const oldUrl = profile[columnKey];
+    if (oldUrl) {
+      try {
         const oldFile = oldUrl.split("/").pop().split("?")[0];
         await supabase.storage.from("profile_pics").remove([oldFile]);
+      } catch (e) {
+        // ignore deletion error
       }
-
-      const { error: uploadError } = await supabase.storage
-        .from("profile_pics")
-        .upload(filePath, compressed);
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from("profile_pics")
-        .getPublicUrl(filePath);
-      const imageUrl = `${data.publicUrl}?t=${timestamp}`;
-
-      const { error: dbError } = await supabase
-        .from("users")
-        .upsert({ id: user.id, [columnKey]: imageUrl, username: profile.username });
-      if (dbError) throw dbError;
-
-      setProfile((prev) => ({ ...prev, [columnKey]: imageUrl }));
-    } catch (err) {
-      alert("Failed to upload image: " + err.message);
     }
+
+    const { error: uploadError } = await supabase.storage.from("profile_pics").upload(filePath, file);
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from("profile_pics").getPublicUrl(filePath);
+    const imageUrl = `${data.publicUrl}?t=${timestamp}`;
+
+    const { error: dbError } = await supabase.from("users").upsert({ id: user.id, [columnKey]: imageUrl });
+    if (dbError) throw dbError;
+
+    setProfile((p) => ({ ...p, [columnKey]: imageUrl }));
   };
 
-  /* ----------------------------
-     3. Validation before saving
-  ---------------------------- */
-  const validateFields = () => {
+  /* ----------
+     Validation per-step
+  ---------- */
+  const validateStep = (stepIndex) => {
     const newErrors = {};
 
-    if (!profile.username) newErrors.username = "Username is required.";
-    if (/\s/.test(profile.username || ""))
-      newErrors.username = "Username cannot contain spaces.";
-    if (!profile.full_name) newErrors.full_name = "Full name is required.";
-    if (!profile.company) newErrors.company = "Company name is required.";
-    if (!profile.role) newErrors.role = "Role / title is required.";
+    if (stepIndex === 1) {
+      // Basic
+      if (!profile.username) newErrors.username = "Username is required.";
+      if (/\s/.test(profile.username || "")) newErrors.username = "Username cannot contain spaces.";
+      if (!profile.full_name) newErrors.full_name = "Full name is required.";
+      if (!profile.company) newErrors.company = "Company is required.";
+      if (!profile.role) newErrors.role = "Role / title is required.";
+    }
+
+    if (stepIndex === 2) {
+      // Contact
+      if (profile.phone_number && !validatePhone(profile.phone_number)) newErrors.phone_number = "Enter a valid phone in international format (e.g. +919876543210).";
+      if (profile.website_url && !URL_REGEX.test(profile.website_url)) newErrors.website_url = "Enter a valid website URL starting with https://";
+      if (profile.linkedin_url && !validateSocialUrl(profile.linkedin_url)) newErrors.linkedin_url = "Enter a valid LinkedIn URL.";
+      if (profile.instagram_url && !validateSocialUrl(profile.instagram_url)) newErrors.instagram_url = "Enter a valid Instagram URL.";
+      if (profile.twitter_url && !validateSocialUrl(profile.twitter_url)) newErrors.twitter_url = "Enter a valid X/Twitter URL.";
+      if (profile.facebook_url && !validateSocialUrl(profile.facebook_url)) newErrors.facebook_url = "Enter a valid Facebook URL.";
+      if (profile.whatsapp_url && !validateSocialUrl(profile.whatsapp_url)) newErrors.whatsapp_url = "Enter a valid WhatsApp link (wa.me or whatsapp.com).";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  /* ----------------------------
-     4. Save Profile
-  ---------------------------- */
+  const goNext = async () => {
+    const valid = validateStep(step);
+    if (!valid) return;
+
+    // special action when leaving Basic step: ensure uniqueness & lock logic
+    if (step === 1) {
+      // check username uniqueness
+      try {
+        const { data: existing } = await supabase.from("users").select("id").eq("username", profile.username).neq("id", user.id).maybeSingle();
+        if (existing) {
+          setErrors({ username: "This username is already taken." });
+          return;
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    setStep((s) => Math.min(s + 1, steps.length - 1));
+  };
+  const goPrev = () => setStep((s) => Math.max(s - 1, 0));
+
+  /* ----------
+     Save final profile
+  ---------- */
   const handleSave = async () => {
-    if (!user || isSaving) return;
-    if (!validateFields()) return;
+    if (!validateStep(1) || !validateStep(2)) {
+      // ensure all required steps valid
+      setStep(1);
+      return;
+    }
 
     setIsSaving(true);
     try {
-      const { username } = profile;
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", username)
-        .neq("id", user.id)
-        .maybeSingle();
-
-      if (existingUser) {
-        alert("This username is already taken.");
-        setIsSaving(false);
-        return;
-      }
-
-      const updatedProfile = {
+      const update = {
         id: user.id,
         user_email: user.email,
         full_name: profile.full_name,
@@ -207,242 +521,77 @@ export default function Profile() {
         linkedin_url: profile.linkedin_url,
         twitter_url: profile.twitter_url,
         whatsapp_url: profile.whatsapp_url,
-        username,
+        username: profile.username,
+        // lock username & fullname so app cannot change them anymore
+        is_username_locked: true,
+        is_fullname_locked: true,
       };
-      
-      const { error } = await supabase.from("users").upsert(updatedProfile);
+
+      const { error } = await supabase.from("users").upsert(update);
       if (error) throw error;
-      setProfile((prev) => ({ ...prev, isUsernameLocked: true }));
-      alert("✅ Profile updated successfully!");
-    } catch (err) {
-      alert("❌ Update failed: " + err.message);
+
+      setProfile((p) => ({ ...p, is_username_locked: true, is_fullname_locked: true }));
+      alert("✅ Profile saved. Username & full name locked. To change them contact admin.");
+    } catch (e) {
+      alert("Failed to save: " + e.message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
-  };
-
   if (loading)
-    return (
-      <p className="text-center mt-10 text-xl font-semibold text-blue-600">
-        Loading profile...
-      </p>
-    );
+    return <p className="text-center mt-10 text-xl font-semibold text-blue-600">Loading profile...</p>;
 
-  /* ----------------------------
-     5. UI Layout
-  ---------------------------- */
+  const readOnlyUsername = !!profile.is_username_locked;
+
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl p-6 sm:p-8">
-        <h1 className="text-3xl text-center font-bold text-gray-800 mb-6 border-b pb-2">
-          Edit Your Business Profile
-        </h1>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 flex items-start justify-center">
+      <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Profile</h1>
 
-        {/* COVER IMAGE */}
-        <div className="relative w-full h-48 mb-6 bg-gray-200 rounded-lg overflow-hidden">
-          {profile.cover_pic_url ? (
-            <img
-              src={profile.cover_pic_url}
-              alt="Cover"
-              className="object-cover w-full h-full"
-            />
-          ) : (
-            <div className="flex items-center justify-center w-full h-full text-gray-400">
-              No cover photo
-            </div>
-          )}
-          <label className="absolute bottom-3 right-3 bg-white px-3 py-1 rounded shadow cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-700">
-            Change Cover
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleImageUpload(e, "cover")}
-            />
-          </label>
+        {/* progress */}
+        <div className="mb-6">
+          <div className="text-xs text-gray-500 mb-2">Step {step + 1} of {steps.length}: {steps[step]}</div>
+          <div className="w-full bg-gray-200 h-2 rounded overflow-hidden">
+            <div className="h-2 bg-blue-600" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
+          </div>
         </div>
 
-        {/* PROFILE PHOTO */}
-        <div className="flex flex-col items-center mb-6">
-          <img
-            src={
-              profile.profile_pic_url ||
-              "https://via.placeholder.com/100/3B82F6/FFFFFF?text=P"
-            }
-            alt="Profile"
-            className="w-28 h-28 rounded-full object-cover border-4 border-blue-500 shadow-md mb-3"
-          />
-          <label className="text-base font-semibold text-blue-600 cursor-pointer hover:text-blue-700">
-            Change Photo
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleImageUpload(e, "profile")}
-            />
-          </label>
+        <div className="space-y-6">
+          {step === 0 && <StepImages profile={profile} onUploadProfile={(file) => uploadImageToStorage(file, "profile")} onUploadCover={(file) => uploadImageToStorage(file, "cover")} />}
+          {step === 1 && <StepBasic profile={profile} setProfile={setProfile} errors={errors} readOnlyUsername={readOnlyUsername} />}
+          {step === 2 && <StepContact profile={profile} setProfile={setProfile} errors={errors} />}
+          {step === 3 && <StepPreview profile={profile} />}
         </div>
 
-        {/* BASIC INFO */}
-        <div className="mb-8 border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Basic Details
-          </h2>
-          <ProfileInput
-            label="Username"
-            placeholder="unique_id"
-            value={profile.username || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({
-                ...prev,
-                username: e.target.value.replace(/\s+/g, ""),
-              }))
-            }
-            readOnly={profile.isUsernameLocked} // New condition (see below)
-            required
-            error={errors.username}
-          />
+        <div className="flex items-center justify-between mt-6">
+          <div>
+            <button onClick={goPrev} disabled={step === 0} className={`px-4 py-2 rounded-lg mr-2 ${step === 0 ? "bg-gray-100 text-gray-400" : "bg-white border shadow-sm"}`}>
+              Previous
+            </button>
+          </div>
 
-          {profile.isUsernameLocked && (
-            <p className="text-green-600 text-xs mb-4 -mt-2">
-              ✅ Username locked — cannot be changed.
-            </p>
-          )}
+          <div className="flex items-center space-x-3">
+            {step < steps.length - 1 ? (
+              <button onClick={goNext} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Next</button>
+            ) : (
+              <button onClick={handleSave} disabled={isSaving} className={`px-4 py-2 rounded-lg font-semibold ${isSaving ? "bg-blue-300 text-white" : "bg-green-600 text-white hover:bg-green-700"}`}>
+                {isSaving ? "Saving..." : "Save Profile"}
+              </button>
+            )}
 
-          <ProfileInput
-            label="Full Name"
-            placeholder="Aman Gupta"
-            value={profile.full_name || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, full_name: e.target.value }))
-            }
-            required
-            error={errors.full_name}
-          />
-          <ProfileInput
-            label="Company Name"
-            placeholder="Tapinfi Technologies"
-            value={profile.company || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, company: e.target.value }))
-            }
-            required
-            error={errors.company}
-          />
-          <ProfileInput
-            label="Role / Title"
-            placeholder="Founder / CEO"
-            value={profile.role || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, role: e.target.value }))
-            }
-            required
-            error={errors.role}
-          />
-          <ProfileTextarea
-            label="About You"
-            placeholder="Brief about your work, business or vision..."
-            value={profile.about || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, about: e.target.value }))
-            }
-          />
+            <button onClick={async () => { await supabase.auth.signOut(); navigate("/"); }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+              Logout
+            </button>
+          </div>
         </div>
 
-        {/* CONTACT + SOCIAL */}
-        <div className="mb-8 border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Contact & Social Links
-          </h2>
-          <ProfileInput
-            label="Email"
-            value={profile.user_email || ""}
-            readOnly
-          />
-          <ProfileInput
-            label="Phone Number"
-            placeholder="+91 9876543210"
-            value={profile.phone_number || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, phone_number: e.target.value }))
-            }
-          />
-          <ProfileInput
-            label="Website"
-            placeholder="https://yourcompany.com"
-            value={profile.website_url || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, website_url: e.target.value }))
-            }
-          />
-          <ProfileInput
-            label="LinkedIn URL"
-            placeholder="https://linkedin.com/in/yourname"
-            value={profile.linkedin_url || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, linkedin_url: e.target.value }))
-            }
-          />
-          <ProfileInput
-            label="Instagram URL"
-            placeholder="https://instagram.com/yourhandle"
-            value={profile.instagram_url || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, instagram_url: e.target.value }))
-            }
-          />
-          <ProfileInput
-            label="Twitter/X URL"
-            placeholder="https://twitter.com/yourhandle"
-            value={profile.twitter_url || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, twitter_url: e.target.value }))
-            }
-          />
-          <ProfileInput
-            label="Facebook URL"
-            placeholder="https://facebook.com/yourpage"
-            value={profile.facebook_url || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, facebook_url: e.target.value }))
-            }
-          />
-          <ProfileInput
-            label="WhatsApp Link"
-            placeholder="https://wa.me/919876543210"
-            value={profile.whatsapp_url || ""}
-            onChange={(e) =>
-              setProfile((prev) => ({ ...prev, whatsapp_url: e.target.value }))
-            }
-          />
-        </div>
-
-        {/* ACTION BUTTONS */}
-        <div className="flex flex-col space-y-3 mt-6">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`w-full py-3 rounded-lg text-lg font-bold transition duration-200 ${
-              isSaving
-                ? "bg-blue-300 text-white cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-            }`}
-          >
-            {isSaving ? "Saving..." : "Save Changes"}
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="w-full py-3 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition duration-200"
-          >
-            Logout
-          </button>
-        </div>
+        {/* inline validation summary */}
+        {Object.keys(errors).length > 0 && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded text-sm">
+            {Object.values(errors).map((err, i) => (<div key={i}>• {err}</div>))}
+          </div>
+        )}
       </div>
     </div>
   );

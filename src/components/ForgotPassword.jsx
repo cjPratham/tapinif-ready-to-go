@@ -6,12 +6,22 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleReset = async (e) => {
     e.preventDefault();
     setMessage("");
     setError("");
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -21,25 +31,27 @@ export default function ForgotPassword() {
       if (error) throw error;
 
       setMessage(
-        "Password reset link sent! Check your email to reset your password."
+        "✅ Password reset link sent! Check your email to reset your password."
       );
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded-2xl shadow-md w-80">
-        <h2 className="text-center text-xl font-semibold mb-4">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-sm">
+        <h2 className="text-center text-2xl font-semibold mb-6 text-blue-600">
           Forgot Password
         </h2>
 
-        <form onSubmit={handleReset} className="flex flex-col space-y-3">
+        <form onSubmit={handleReset} className="flex flex-col gap-4">
           <input
             type="email"
             placeholder="Enter your email"
-            className="p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -50,14 +62,17 @@ export default function ForgotPassword() {
 
           <button
             type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-md transition"
+            disabled={loading}
+            className={`w-full py-3 rounded-md text-white font-medium transition ${
+              loading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
-            Send Reset Link
+            {loading ? "Sending..." : "Send Reset Link"}
           </button>
         </form>
 
         <p
-          className="text-center text-sm mt-4 text-blue-600 cursor-pointer"
+          className="text-center text-sm mt-6 text-blue-600 cursor-pointer hover:underline"
           onClick={() => navigate("/")}
         >
           Back to Login

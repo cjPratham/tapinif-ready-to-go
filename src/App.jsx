@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
@@ -12,10 +12,14 @@ import AdminDashboard from "./pages/AdminDashboard";
 import WalletPage from "./pages/WalletPage";
 import MyThemes from "./pages/MyThemes";
 
-export default function App() {
+function AppWrapper() {
+  const location = useLocation();
+  const hideNavbarRoutes = ["/admin/dashboard", "/admin/login"];
+  const showNavbar = !hideNavbarRoutes.includes(location.pathname);
+
   return (
-    <Router>
-      <NavbarSlider />
+    <>
+      {showNavbar && <NavbarSlider />}
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
@@ -24,11 +28,19 @@ export default function App() {
         <Route path="/confirm-email" element={<ConfirmEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/themes" element={<MyThemes />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
       </Routes>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppWrapper />
     </Router>
   );
 }
