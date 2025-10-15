@@ -44,7 +44,7 @@ export default function ForgotPassword() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
       <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-sm">
         <h2 className="text-center text-2xl font-semibold mb-6 text-blue-600">
-          Forgot Password
+          Reset Password
         </h2>
 
         <form onSubmit={handleReset} className="flex flex-col gap-4">

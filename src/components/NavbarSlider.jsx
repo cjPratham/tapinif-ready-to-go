@@ -188,7 +188,8 @@ export default function NavbarSlider() {
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 hover:text-blue-600 transition"
           >
-            <FaKey size={18} /> Forgot Password
+            <FaKey size={18} /> 
+            Reset Password
           </Link>
 
           <button
