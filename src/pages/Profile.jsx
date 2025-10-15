@@ -580,9 +580,9 @@ export default function ProfileWizard() {
               </button>
             )}
 
-            <button onClick={async () => { await supabase.auth.signOut(); navigate("/"); }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+            {/* <button onClick={async () => { await supabase.auth.signOut(); navigate("/"); }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">
               Logout
-            </button>
+            </button> */}
           </div>
         </div>
 

@@ -46,6 +46,7 @@ export default function ResetPassword() {
       setError(error.message || "Failed to update password.");
     } else {
       setMessage("Password updated successfully! Redirecting to login...");
+      await supabase.auth.signOut();
       setTimeout(() => navigate("/"), 2500);
     }
     setSubmitting(false);

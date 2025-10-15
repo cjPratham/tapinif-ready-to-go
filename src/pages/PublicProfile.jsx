@@ -4,10 +4,12 @@ import { supabase } from "../lib/supabaseClient";
 
 import BlueTheme from "../assets/Themes/BlueTheme";
 import GreenProfile from "../assets/Themes/GreenProfile";
+import DirectorProfileTheme from "../assets/Themes/DirectorProfileTheme";
 
 const themeComponents = {
   "BlueTheme": BlueTheme,
   "GreenProfile": GreenProfile,
+  "DirectorProfileTheme": DirectorProfileTheme
 };
 
 export default function PublicProfile() {
