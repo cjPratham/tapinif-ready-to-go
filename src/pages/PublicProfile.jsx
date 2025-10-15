@@ -5,11 +5,13 @@ import { supabase } from "../lib/supabaseClient";
 import BlueTheme from "../assets/Themes/BlueTheme";
 import GreenProfile from "../assets/Themes/GreenProfile";
 import DirectorProfileTheme from "../assets/Themes/DirectorProfileTheme";
+import PinkBusinessCardTheme from "../assets/Themes/PinkBusinessCardTheme";
 
 const themeComponents = {
   "BlueTheme": BlueTheme,
   "GreenProfile": GreenProfile,
-  "DirectorProfileTheme": DirectorProfileTheme
+  "DirectorProfileTheme": DirectorProfileTheme,
+  "PinkBusinessCardTheme": PinkBusinessCardTheme,
 };
 
 export default function PublicProfile() {

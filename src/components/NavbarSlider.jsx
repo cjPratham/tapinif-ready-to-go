@@ -20,42 +20,45 @@ export default function NavbarSlider() {
   const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
 
-  const fetchUser = async () => {
-    try {
-      setRefreshing(true);
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+const fetchUser = async () => {
+  try {
+    setRefreshing(true);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
 
-      if (authError) throw authError;
-
-      const currentUser = authData?.user || null;
-      setUser(currentUser);
-
-      if (!currentUser) {
-        setUsername("");
-        return;
-      }
-
-      // Fetch username from users table
-      const { data: profileData, error: profileError } = await supabase
-        .from("users")
-        .select("username")
-        .eq("id", currentUser.id)
-        .single();
-
-      if (profileError && profileError.code !== "PGRST116") throw profileError; // ignore "no rows"
-
-      setUsername(profileData?.username || currentUser.user_metadata?.username || "");
-    } catch (err) {
-      console.error("Error fetching user or username:", err.message || err);
+    if (authError || !authData?.user) {
+      // No session, skip fetching user data
       setUser(null);
       setUsername("");
-    } finally {
-      setRefreshing(false);
-      setLoadingUser(false);
+      return;
     }
-  };
 
- useEffect(() => {
+    const currentUser = authData.user;
+    setUser(currentUser);
+
+    // Fetch username from users table
+    const { data: profileData, error: profileError } = await supabase
+      .from("users")
+      .select("username")
+      .eq("id", currentUser.id)
+      .single();
+
+    if (profileError && profileError.code !== "PGRST116") throw profileError;
+
+    setUsername(profileData?.username || currentUser.user_metadata?.username || "");
+  } catch (err) {
+    // Silent fail for public views
+    if (!err.message.includes("Auth session missing")) {
+      console.error("Error fetching user or username:", err.message || err);
+    }
+    setUser(null);
+    setUsername("");
+  } finally {
+    setRefreshing(false);
+    setLoadingUser(false);
+  }
+};
+
+useEffect(() => {
   fetchUser();
 
   const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -65,7 +68,8 @@ export default function NavbarSlider() {
     setLoadingUser(false);
   });
 
-  const interval = setInterval(fetchUser, 1000); // every 30s
+  // Refresh every 60 seconds instead of 1s
+  const interval = setInterval(fetchUser, 10000);
   const handleFocus = () => fetchUser();
   window.addEventListener("focus", handleFocus);
 
@@ -75,6 +79,7 @@ export default function NavbarSlider() {
     window.removeEventListener("focus", handleFocus);
   };
 }, []);
+
 
 
   const handleLogout = async () => {

@@ -10,6 +10,7 @@ import {
   FaTwitter,
   FaWhatsapp,
   FaShareAlt,
+  FaArrowLeft
 } from "react-icons/fa";
 import { MdEmail, MdInsertDriveFile } from "react-icons/md";
 import AddToContactsButton from "../../components/AddToContactButton";
@@ -85,6 +86,7 @@ export default function DirectorProfileTheme() {
       {/* CARD WRAPPER */}
       <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden">
         {/* HEADER */}
+        
         <div
           className="relative flex flex-col items-center text-center pb-6"
           style={{ background: "#E7ECF5", borderBottomRightRadius: "40px" }}
@@ -110,6 +112,13 @@ export default function DirectorProfileTheme() {
           >
             <FaShareAlt size={18} />
           </button>
+          {/* <button
+          onClick={() => window.history.back()}
+          className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/30 backdrop-blur-md text-[white] hover:bg-white/50 transition"
+          aria-label="Go back"
+        >
+          <FaArrowLeft size={18} />
+        </button> */}
 
           {/* Save to Wallet Button */}
           <SaveProfileButton profileUsername={profile.username} />
