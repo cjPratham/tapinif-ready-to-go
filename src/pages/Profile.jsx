@@ -159,8 +159,8 @@ function StepBasic({ profile, setProfile, errors, readOnlyUsername }) {
         />
       </Field>
 
-      <Field label="Company" error={errors.company}>
-        <TextInput value={profile.company || ""} onChange={(e) => setProfile((p) => ({ ...p, company: e.target.value }))} placeholder="Company" />
+      <Field label="Company Name / Company Details" error={errors.company}>
+        <textarea value={profile.company || ""} onChange={(e) => setProfile((p) => ({ ...p, company: e.target.value }))} placeholder="Company" className="w-full p-3 border rounded-lg" rows={4}/>
       </Field>
 
       <Field label="Role / Title" error={errors.role}>

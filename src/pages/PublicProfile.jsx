@@ -6,12 +6,14 @@ import BlueTheme from "../assets/Themes/BlueTheme";
 import GreenProfile from "../assets/Themes/GreenProfile";
 import DirectorProfileTheme from "../assets/Themes/DirectorProfileTheme";
 import PinkBusinessCardTheme from "../assets/Themes/PinkBusinessCardTheme";
+import BusinessTheme from "../assets/Themes/BusinessTheme";
 
 const themeComponents = {
   "BlueTheme": BlueTheme,
   "GreenProfile": GreenProfile,
   "DirectorProfileTheme": DirectorProfileTheme,
   "PinkBusinessCardTheme": PinkBusinessCardTheme,
+  "BusinessTheme": BusinessTheme,
 };
 
 export default function PublicProfile() {
