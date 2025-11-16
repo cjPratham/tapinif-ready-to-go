@@ -282,10 +282,7 @@ export default function DirectorProfileTheme() {
 
         {/* FOOTER */}
         <footer className="text-center text-xs text-gray-500 pb-5">
-          Powered by{" "}
-          <span className="text-blue-600 font-medium">
-            Tapinfi Solutions Pvt Ltd
-          </span>
+         Powered by : <span className="font-semibold text-blue"><a target="_blank" href="http://tapinfi.com">Tapinfi Solutions Pvt Ltd</a></span>
         </footer>
       </div>
     </div>

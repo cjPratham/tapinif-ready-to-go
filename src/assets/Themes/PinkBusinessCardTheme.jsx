@@ -227,8 +227,7 @@ END:VCARD
 
         {/* === Footer === */}
         <div className="pb-6 text-center text-xs text-gray-400">
-          Powered by{" "}
-          <span className="text-[#EF5670] font-medium">Tapinfi Solutions Pvt Ltd</span>
+          Powered by : <span className="font-semibold text-[#EF5670]"><a target="_blank" href="http://tapinfi.com">Tapinfi Solutions Pvt Ltd</a></span>
         </div>
       </div>
     </div>
