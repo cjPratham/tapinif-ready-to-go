@@ -56,7 +56,7 @@ export default function EngineerTheme({ profile }) {
 
   const firstName = (full_name || "User").split(" ")[0];
 
-  // user's provided vCard function (kept exactly as requested but adjusted filename)
+  // user's provided vCard function (kept exactly as requested)
   const handleAddToContacts = () => {
     const vcard = `
 BEGIN:VCARD
@@ -124,13 +124,16 @@ END:VCARD
 
   const accent = "#d8d5a7"; // user provided accent
 
+  // only show documents section if at least one doc url present
+  const hasDocs = Boolean(pitch_deck_url || portfolio_url);
+
   return (
     <div className="min-h-screen bg-white flex justify-center">
       <div className="w-full max-w-md lg:max-w-lg px-6 py-8">
         {/* top ribbon + back/share */}
         <div className="relative">
           <div
-            className="absolute -top-19 left-1/2 -translate-x-1/2 h-36 w-38 rounded-t-sm"
+            className="absolute -top-20 left-1/2 -translate-x-1/2 h-36 w-36 rounded-t-sm"
             style={{ background: accent, filter: "blur(0px)" }}
             aria-hidden="true"
           />
@@ -158,7 +161,6 @@ END:VCARD
                 aria-label="Save"
                 className="w-11 h-11 flex items-center justify-center rounded-full bg-white border border-transparent shadow-md"
               >
-                {/* bookmark icon using FaRegBookmark */}
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none">
                   <path d="M6 2h12v20l-6-4-6 4V2z" fill="#1f1b16" />
                 </svg>
@@ -166,15 +168,15 @@ END:VCARD
             </div>
           </div>
 
-          {/* image card */}
+          {/* image card (no border) */}
           <div className="flex justify-center">
             <div
               className="bg-white shadow-xl p-0 rounded-2xl overflow-hidden"
               style={{
                 width: 200,
                 height: 200,
-                borderRadius: "22px",      // override for perfect match
-                boxShadow: "0 25px 40px rgba(0,0,0,0.08)", // soft shadow like screenshot
+                borderRadius: "22px",
+                boxShadow: "0 25px 40px rgba(0,0,0,0.08)",
               }}
             >
               <img
@@ -228,20 +230,18 @@ END:VCARD
           </button>
         </div>
 
-        {/* About section */}
+        {/* About section - header is just "About" and paragraph is justified */}
         {about && (
           <div className="mt-10">
-            <h3 className="text-lg font-semibold text-[#111827] mb-3">
-              About {firstName}
-            </h3>
-            <p className="text-gray-600 leading-relaxed">{about}</p>
+            <h3 className="text-lg font-semibold text-[#111827] mb-3">About</h3>
+            <p className="text-gray-600 leading-relaxed text-justify">{about}</p>
           </div>
         )}
 
-        {/* Company portfolio */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-[#111827] mb-3">Company's Portfolio</h3>
-          {pitch_deck_url || portfolio_url ? (
+        {/* Company portfolio - only visible when docs exist */}
+        {hasDocs && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-[#111827] mb-3">Company's Portfolio</h3>
             <a
               href={pitch_deck_url || portfolio_url}
               target="_blank"
@@ -256,17 +256,14 @@ END:VCARD
               </div>
               <span className="text-gray-400">›</span>
             </a>
-          ) : (
-            <div className="text-gray-400">No documents available</div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Social Links */}
         <div className="mt-8">
           <h3 className="text-lg font-semibold text-[#111827] mb-4">Social Links</h3>
 
           <div className="flex items-center gap-3">
-
             {socialList.map(({ key, url, Icon }, i) =>
               url ? (
                 <a
@@ -279,22 +276,15 @@ END:VCARD
                 >
                   {/* Brand color icons */}
                   {key === "facebook" && <FaFacebookF size={20} className="text-[#1877F2]" />}
-                  {key === "instagram" && (
-                    <FaInstagram
-                      size={20}
-                      className="text-[#E4405F]"
-                    />
-                  )}
+                  {key === "instagram" && <FaInstagram size={20} className="text-[#E4405F]" />}
                   {key === "linkedin" && <FaLinkedinIn size={20} className="text-[#0A66C2]" />}
-                  {key === "x" && <XIcon size={22} className="text-black" />}
-                  {key === "whatsapp" && <FaWhatsapp size={22} className="text-[#25D366]" />}
+                  {key === "x" && <XIcon size={20} className="text-black" />}
+                  {key === "whatsapp" && <FaWhatsapp size={20} className="text-[#25D366]" />}
                 </a>
               ) : null
             )}
-
           </div>
         </div>
-
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm">
