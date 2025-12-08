@@ -178,41 +178,98 @@ function StepContact({ profile, setProfile, errors }) {
   return (
     <div>
       <h3 className="text-lg font-semibold mb-3">Contact & Social</h3>
+
       <Field label="Email">
         <TextInput value={profile.user_email || ""} readOnly />
       </Field>
 
       <Field label="Phone Number" error={errors.phone_number}>
-        <TextInput value={profile.phone_number || ""} onChange={(e) => setProfile((p) => ({ ...p, phone_number: e.target.value }))} placeholder="+919876543210" />
+        <TextInput
+          value={profile.phone_number || ""}
+          onChange={(e) =>
+            setProfile((p) => ({ ...p, phone_number: e.target.value }))
+          }
+          placeholder="+919876543210"
+        />
       </Field>
 
       <Field label="Website" error={errors.website_url}>
-        <TextInput value={profile.website_url || ""} onChange={(e) => setProfile((p) => ({ ...p, website_url: e.target.value }))} placeholder="https://yourcompany.com" />
+        <TextInput
+          value={profile.website_url || ""}
+          onChange={(e) =>
+            setProfile((p) => ({ ...p, website_url: e.target.value }))
+          }
+          placeholder="https://yourcompany.com"
+        />
       </Field>
 
+      {/* ✅ NEW — Portfolio URL field */}
+      <Field label="Portfolio URL ( Company Brochure or Catalog)">
+        <TextInput
+          value={profile.portfolio_url || ""}
+          onChange={(e) =>
+            setProfile((p) => ({ ...p, portfolio_url: e.target.value }))
+          }
+          placeholder="https://yourportfolio.com / Google Drive PDF"
+        />
+      </Field>
+      {/* END NEW */}
+
       <Field label="LinkedIn" error={errors.linkedin_url}>
-        <TextInput value={profile.linkedin_url || ""} onChange={(e) => setProfile((p) => ({ ...p, linkedin_url: e.target.value }))} placeholder="https://linkedin.com/in/yourname" />
+        <TextInput
+          value={profile.linkedin_url || ""}
+          onChange={(e) =>
+            setProfile((p) => ({ ...p, linkedin_url: e.target.value }))
+          }
+          placeholder="https://linkedin.com/in/yourname"
+        />
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Instagram" error={errors.instagram_url}>
-          <TextInput value={profile.instagram_url || ""} onChange={(e) => setProfile((p) => ({ ...p, instagram_url: e.target.value }))} placeholder="https://instagram.com/yourhandle" />
+          <TextInput
+            value={profile.instagram_url || ""}
+            onChange={(e) =>
+              setProfile((p) => ({ ...p, instagram_url: e.target.value }))
+            }
+            placeholder="https://instagram.com/yourhandle"
+          />
         </Field>
+
         <Field label="X / Twitter" error={errors.twitter_url}>
-          <TextInput value={profile.twitter_url || ""} onChange={(e) => setProfile((p) => ({ ...p, twitter_url: e.target.value }))} placeholder="https://x.com/yourhandle" />
+          <TextInput
+            value={profile.twitter_url || ""}
+            onChange={(e) =>
+              setProfile((p) => ({ ...p, twitter_url: e.target.value }))
+            }
+            placeholder="https://x.com/yourhandle"
+          />
         </Field>
       </div>
 
       <Field label="Facebook" error={errors.facebook_url}>
-        <TextInput value={profile.facebook_url || ""} onChange={(e) => setProfile((p) => ({ ...p, facebook_url: e.target.value }))} placeholder="https://facebook.com/yourpage" />
+        <TextInput
+          value={profile.facebook_url || ""}
+          onChange={(e) =>
+            setProfile((p) => ({ ...p, facebook_url: e.target.value }))
+          }
+          placeholder="https://facebook.com/yourpage"
+        />
       </Field>
 
       <Field label="WhatsApp Link" error={errors.whatsapp_url}>
-        <TextInput value={profile.whatsapp_url || ""} onChange={(e) => setProfile((p) => ({ ...p, whatsapp_url: e.target.value }))} placeholder="https://wa.me/919876543210" />
+        <TextInput
+          value={profile.whatsapp_url || ""}
+          onChange={(e) =>
+            setProfile((p) => ({ ...p, whatsapp_url: e.target.value }))
+          }
+          placeholder="https://wa.me/919876543210"
+        />
       </Field>
     </div>
   );
 }
+
 
 function StepPreview({ profile }) {
   return (
