@@ -204,7 +204,7 @@ function StepContact({ profile, setProfile, errors }) {
       </Field>
 
       {/* ✅ NEW — Portfolio URL field */}
-      <Field label="Portfolio URL ( Company Brochure or Catalog)">
+      <Field label="Docs URL ( Company Brochure or Catalog)">
         <TextInput
           value={profile.portfolio_url || ""}
           onChange={(e) =>
