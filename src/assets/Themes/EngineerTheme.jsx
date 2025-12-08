@@ -241,7 +241,7 @@ END:VCARD
         {/* Company portfolio - only visible when docs exist */}
         {hasDocs && (
           <div className="mt-8">
-            <h3 className="text-lg font-semibold text-[#111827] mb-3">Company's Portfolio</h3>
+            <h3 className="text-lg font-semibold text-[#111827] mb-3">Documents</h3>
             <a
               href={pitch_deck_url || portfolio_url}
               target="_blank"
