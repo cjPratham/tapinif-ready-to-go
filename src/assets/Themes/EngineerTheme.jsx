@@ -12,6 +12,7 @@ import {
   FaWhatsapp,
 } from "react-icons/fa";
 import { MdInsertDriveFile } from "react-icons/md";
+import SaveProfileButton from "../../components/SaveProfileButton";
 
 /** Inline X icon (compact) */
 function XIcon({ size = 20, className = "" }) {
@@ -138,35 +139,52 @@ END:VCARD
             aria-hidden="true"
           />
 
-          <div className="flex items-start justify-between mb-6">
-            <button
-              onClick={() => window.history.back()}
-              aria-label="Back"
-              className="w-9 h-9 flex items-center justify-center rounded-full text-[#1f1b16] bg-transparent"
-            >
-              <FaArrowLeft size={18} />
-            </button>
+        <div className="flex items-start justify-between mb-6">
+  {/* LEFT: Back Arrow */}
+  <button
+    onClick={() => window.history.back()}
+    aria-label="Back"
+    className="
+      w-9 h-9 flex items-center justify-center rounded-full
+      text-black bg-transparent
+      hover:bg-black/5 transition
+    "
+  >
+    <FaArrowLeft size={18} />
+  </button>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleShare}
-                aria-label="Share"
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-white border border-transparent shadow-md"
-              >
-                <FaShareAlt size={16} className="text-[#1f1b16]" />
-              </button>
+  {/* RIGHT: Share + Save */}
+  <div className="flex items-center gap-3">
+    {/* Share Button */}
+    <button
+      onClick={handleShare}
+      aria-label="Share Profile"
+      className="
+        w-9 h-9 flex items-center justify-center rounded-full
+        bg-white border border-[#E6EEF8] shadow-sm
+        hover:bg-gray-50 hover:shadow-md
+        focus:outline-none focus:ring-2 focus:ring-black/10
+        transition
+      "
+    >
+      <FaShareAlt size={16} className="text-black" />
+    </button>
 
-              <button
-                onClick={handleSave}
-                aria-label="Save"
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-white border border-transparent shadow-md"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none">
-                  <path d="M6 2h12v20l-6-4-6 4V2z" fill="#1f1b16" />
-                </svg>
-              </button>
-            </div>
-          </div>
+    {/* Save Button (using new SaveProfileButton with styling support) */}
+    <SaveProfileButton
+      profileUsername={profile.username}
+      className="
+        w-9 h-9 flex items-center justify-center rounded-full
+        bg-white border border-[#E6EEF8] shadow-sm
+        text-black
+        hover:bg-gray-50 hover:shadow-md
+        focus:outline-none focus:ring-2 focus:ring-black/10
+        transition
+      "
+    />
+  </div>
+</div>
+
 
           {/* image card (no border) */}
           <div className="flex justify-center">

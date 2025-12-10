@@ -3,7 +3,10 @@ import { supabase } from "../lib/supabaseClient";
 import { FaBookmark } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 
-export default function SaveProfileButton({ profileUsername }) {
+export default function SaveProfileButton({
+  profileUsername,
+  className = "",
+}) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -13,7 +16,7 @@ export default function SaveProfileButton({ profileUsername }) {
 
   // Fetch current user
   useEffect(() => {
-    supabase.auth.getUser().then(res => {
+    supabase.auth.getUser().then((res) => {
       setUser(res.data?.user || null);
     });
   }, []);
@@ -26,7 +29,7 @@ export default function SaveProfileButton({ profileUsername }) {
         .from("wallet_users")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       setWalletMember(!!data);
     };
     checkWallet();
@@ -41,7 +44,8 @@ export default function SaveProfileButton({ profileUsername }) {
         .select("*")
         .eq("user_id", user.id)
         .eq("card_username", profileUsername)
-        .single();
+        .maybeSingle();
+
       if (data) setSaved(true);
     };
     checkSaved();
@@ -49,13 +53,11 @@ export default function SaveProfileButton({ profileUsername }) {
 
   const handleSave = async () => {
     if (!user) {
-      // Redirect to login with return path
       navigate("/", { state: { redirectTo: window.location.pathname } });
       return;
     }
 
     if (!walletMember) {
-      // Redirect to wallet auth with return path
       navigate("/wallet/auth", { state: { redirectTo: window.location.pathname } });
       return;
     }
@@ -83,16 +85,32 @@ export default function SaveProfileButton({ profileUsername }) {
     }
   };
 
+  /* -----------------------------
+     DEFAULT BUTTON STYLE
+     ----------------------------- */
+  const defaultStyle = `
+    w-9 h-9 flex items-center justify-center rounded-full
+    bg-white text-black
+    border border-[#E6EEF8] shadow-sm
+    hover:shadow-md hover:bg-gray-50
+    focus:outline-none focus:ring-2 focus:ring-black/10
+    transition
+  `;
+
+  const savedStyle = `
+    bg-green-500 text-black
+    hover:bg-green-600
+    border-none
+  `;
+
   return (
     <button
       onClick={handleSave}
       disabled={loading}
-      className={`bg-white/20 backdrop-blur-md text-white p-3 rounded-full hover:bg-white/30 transition duration-200 shadow-md ${
-        saved ? "bg-green-500 hover:bg-green-600" : ""
-      }`}
       aria-label={saved ? "Saved" : "Save Profile"}
+      className={`${defaultStyle} ${saved ? savedStyle : ""} ${className}`}
     >
-      <FaBookmark size={18} />
+      <FaBookmark size={16} />
     </button>
   );
 }

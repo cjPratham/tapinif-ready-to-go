@@ -16,6 +16,7 @@ import {
 import {
   FaXTwitter
 } from "react-icons/fa6";
+import SaveProfileButton from "../../components/SaveProfileButton";
 
 import { MdInsertDriveFile } from "react-icons/md";
 
@@ -156,14 +157,12 @@ END:VCARD
                 <FaShareAlt size={14} className="text-[#2f3e63]" />
               </button>
 
-              <button
-                onClick={handleSave}
-                aria-label="Save"
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-[#E6EEF8] shadow-sm"
-                title="Save"
-              >
-                <FaRegBookmark size={14} className="text-[#2f3e63]" />
-              </button>
+              
+               <SaveProfileButton
+                  profileUsername={profile.username}
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-[#E6EEF8] shadow-sm"/>
+              
+             
             </div>
 
             {/* Avatar + name/role */}
