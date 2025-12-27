@@ -155,7 +155,7 @@ function StepBasic({ profile, setProfile, errors, readOnlyUsername }) {
           value={profile.full_name || ""}
           onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))}
           placeholder="Your full name"
-          readOnly={!!profile.is_fullname_locked}
+          
         />
       </Field>
 
@@ -581,14 +581,14 @@ export default function ProfileWizard() {
         username: profile.username,
         // lock username & fullname so app cannot change them anymore
         is_username_locked: true,
-        is_fullname_locked: true,
+        // is_fullname_locked: true,
       };
 
       const { error } = await supabase.from("users").upsert(update);
       if (error) throw error;
 
-      setProfile((p) => ({ ...p, is_username_locked: true, is_fullname_locked: true }));
-      alert("✅ Profile saved. Username & full name locked. To change them contact admin.");
+      setProfile((p) => ({ ...p, is_username_locked: true}));
+      alert("Profile saved successfully!");
     } catch (e) {
       alert("Failed to save: " + e.message);
     } finally {
