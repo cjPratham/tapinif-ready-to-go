@@ -134,7 +134,7 @@ END:VCARD
         {/* top ribbon + back/share */}
         <div className="relative">
           <div
-            className="absolute -top-20 left-1/2 -translate-x-1/2 h-36 w-36 rounded-t-sm"
+            className="absolute -top-21 left-1/2 -translate-x-1/2 h-36 w-36 rounded-t-sm"
             style={{ background: accent, filter: "blur(0px)" }}
             aria-hidden="true"
           />

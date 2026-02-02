@@ -581,7 +581,7 @@ export default function ProfileWizard() {
         username: profile.username,
         // lock username & fullname so app cannot change them anymore
         is_username_locked: true,
-        // is_fullname_locked: true,
+        is_fullname_locked: false,
       };
 
       const { error } = await supabase.from("users").upsert(update);
