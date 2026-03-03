@@ -125,7 +125,7 @@ END:VCARD
 
   const accent = "#d8d5a7"; // user provided accent
 
-  // only show documents section if at least one doc url present
+  // only show documents section if at least one doc url present line
   const hasDocs = Boolean(pitch_deck_url || portfolio_url);
 
   return (
